@@ -118,7 +118,7 @@ class SupportCollectionTest extends PHPUnit_Framework_TestCase
         $c->expects($this->once())->method('toArray')->will($this->returnValue('foo'));
         $results = $c->toJson();
 
-        $this->assertEquals(json_encode('foo'), $results);
+        $this->assertJsonStringEqualsJsonString(json_encode('foo'), $results);
     }
 
     public function testCastingToStringJsonEncodesTheToArrayResult()
@@ -126,7 +126,7 @@ class SupportCollectionTest extends PHPUnit_Framework_TestCase
         $c = $this->getMock('Illuminate\Support\Collection', ['toArray']);
         $c->expects($this->once())->method('toArray')->will($this->returnValue('foo'));
 
-        $this->assertEquals(json_encode('foo'), (string) $c);
+        $this->assertJsonStringEqualsJsonString(json_encode('foo'), (string) $c);
     }
 
     public function testOffsetAccess()
@@ -140,6 +140,32 @@ class SupportCollectionTest extends PHPUnit_Framework_TestCase
         $this->assertFalse(isset($c['name']));
         $c[] = 'jason';
         $this->assertEquals('jason', $c[0]);
+    }
+
+    public function testForgetSingleKey()
+    {
+        $c = new Collection(['foo', 'bar']);
+        $c->forget(0);
+        $this->assertFalse(isset($c['foo']));
+
+        $c = new Collection(['foo' => 'bar', 'baz' => 'qux']);
+        $c->forget('foo');
+        $this->assertFalse(isset($c['foo']));
+    }
+
+    public function testForgetArrayOfKeys()
+    {
+        $c = new Collection(['foo', 'bar', 'baz']);
+        $c->forget([0, 2]);
+        $this->assertFalse(isset($c[0]));
+        $this->assertFalse(isset($c[2]));
+        $this->assertTrue(isset($c[1]));
+
+        $c = new Collection(['name' => 'taylor', 'foo' => 'bar', 'baz' => 'qux']);
+        $c->forget(['foo', 'baz']);
+        $this->assertFalse(isset($c['foo']));
+        $this->assertFalse(isset($c['baz']));
+        $this->assertTrue(isset($c['name']));
     }
 
     public function testCountable()
@@ -229,13 +255,18 @@ class SupportCollectionTest extends PHPUnit_Framework_TestCase
         $c = new Collection($original = [1, 2, 'foo' => 'bar', 'bam' => 'baz']);
 
         $result = [];
-        $c->each(function ($item, $key) use (&$result) { $result[$key] = $item; });
+        $c->each(function ($item, $key) use (&$result) {
+            $result[$key] = $item;
+        });
         $this->assertEquals($original, $result);
 
         $result = [];
-        $c->each(function ($item, $key) use (&$result) { $result[$key] = $item; if (is_string($key)) {
-     return false;
- } });
+        $c->each(function ($item, $key) use (&$result) {
+            $result[$key] = $item;
+            if (is_string($key)) {
+                return false;
+            }
+        });
         $this->assertEquals([1, 2, 'foo' => 'bar'], $result);
     }
 
@@ -296,6 +327,9 @@ class SupportCollectionTest extends PHPUnit_Framework_TestCase
     {
         $data = (new Collection([5, 3, 1, 2, 4]))->sort();
         $this->assertEquals([1, 2, 3, 4, 5], $data->values()->all());
+
+        $data = (new Collection([-1, -3, -2, -4, -5, 0, 5, 3, 1, 2, 4]))->sort();
+        $this->assertEquals([-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5], $data->values()->all());
 
         $data = (new Collection(['foo', 'bar-10', 'bar-1']))->sort();
         $this->assertEquals(['bar-1', 'bar-10', 'foo'], $data->values()->all());
@@ -361,6 +395,34 @@ class SupportCollectionTest extends PHPUnit_Framework_TestCase
         $this->assertEquals([10], $data[3]->toArray());
     }
 
+    public function testEvery()
+    {
+        $data = new Collection([
+            6 => 'a',
+            4 => 'b',
+            7 => 'c',
+            1 => 'd',
+            5 => 'e',
+            3 => 'f',
+        ]);
+
+        $this->assertEquals(['a', 'e'], $data->every(4)->all());
+        $this->assertEquals(['b', 'f'], $data->every(4, 1)->all());
+        $this->assertEquals(['c'], $data->every(4, 2)->all());
+        $this->assertEquals(['d'], $data->every(4, 3)->all());
+    }
+
+    public function testExcept()
+    {
+        $data = new Collection(['first' => 'Taylor', 'last' => 'Otwell', 'email' => 'taylorotwell@gmail.com']);
+
+        $this->assertEquals(['first' => 'Taylor'], $data->except(['last', 'email', 'missing'])->all());
+        $this->assertEquals(['first' => 'Taylor'], $data->except('last', 'email', 'missing')->all());
+
+        $this->assertEquals(['first' => 'Taylor', 'email' => 'taylorotwell@gmail.com'], $data->except(['last'])->all());
+        $this->assertEquals(['first' => 'Taylor', 'email' => 'taylorotwell@gmail.com'], $data->except('last')->all());
+    }
+
     public function testPluckWithArrayAndObjectValues()
     {
         $data = new Collection([(object) ['name' => 'taylor', 'email' => 'foo'], ['name' => 'dayle', 'email' => 'bar']]);
@@ -423,6 +485,22 @@ class SupportCollectionTest extends PHPUnit_Framework_TestCase
         $data = new Collection(['taylor', 'dayle', 'shawn']);
         $data = $data->take(-2);
         $this->assertEquals(['dayle', 'shawn'], $data->all());
+    }
+
+    public function testMacroable()
+    {
+        // Foo() macro : unique values starting with A
+        Collection::macro('foo', function () {
+            return $this->filter(function ($item) {
+                    return strpos($item, 'a') === 0;
+                })
+                ->unique()
+                ->values();
+        });
+
+        $c = new Collection(['a', 'a', 'aa', 'aaa', 'bar']);
+
+        $this->assertSame(['a', 'aa', 'aaa'], $c->foo()->all());
     }
 
     public function testMakeMethod()
@@ -531,6 +609,16 @@ class SupportCollectionTest extends PHPUnit_Framework_TestCase
         $data = new Collection(['first' => 'taylor', 'last' => 'otwell']);
         $data = $data->map(function ($item, $key) { return $key.'-'.strrev($item); });
         $this->assertEquals(['first' => 'first-rolyat', 'last' => 'last-llewto'], $data->all());
+    }
+
+    public function testFlatMap()
+    {
+        $data = new Collection([
+            ['name' => 'taylor', 'hobbies' => ['programming', 'basketball']],
+            ['name' => 'adam', 'hobbies' => ['music', 'powerlifting']],
+        ]);
+        $data = $data->flatMap(function ($person) { return $person['hobbies']; });
+        $this->assertEquals(['programming', 'basketball', 'music', 'powerlifting'], $data->all());
     }
 
     public function testTransform()
@@ -689,7 +777,7 @@ class SupportCollectionTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(1, $c->search(2));
         $this->assertEquals('foo', $c->search('bar'));
         $this->assertEquals(4, $c->search(function ($value) { return $value > 4; }));
-        $this->assertEquals('foo', $c->search(function ($value) { return !is_numeric($value); }));
+        $this->assertEquals('foo', $c->search(function ($value) { return ! is_numeric($value); }));
     }
 
     public function testSearchReturnsFalseWhenItemIsNotFound()
@@ -714,6 +802,15 @@ class SupportCollectionTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(['one', 'two'], $c->forPage(1, 2)->all());
         $this->assertEquals(['three', 'four'], $c->forPage(2, 2)->all());
         $this->assertEquals([], $c->forPage(3, 2)->all());
+    }
+
+    public function testPrepend()
+    {
+        $c = new Collection(['one', 'two', 'three', 'four']);
+        $this->assertEquals(['zero', 'one', 'two', 'three', 'four'], $c->prepend('zero')->all());
+
+        $c = new Collection(['one' => 1, 'two' => 2]);
+        $this->assertEquals(['zero' => 0, 'one' => 1, 'two' => 2], $c->prepend(0, 'zero')->all());
     }
 
     public function testZip()
@@ -743,6 +840,62 @@ class SupportCollectionTest extends PHPUnit_Framework_TestCase
         $this->assertEquals([2, 5, null], $c[1]->all());
         $this->assertEquals([3, 6, null], $c[2]->all());
     }
+
+    public function testGettingMaxItemsFromCollection()
+    {
+        $c = new Collection([(object) ['foo' => 10], (object) ['foo' => 20]]);
+        $this->assertEquals(20, $c->max('foo'));
+
+        $c = new Collection([['foo' => 10], ['foo' => 20]]);
+        $this->assertEquals(20, $c->max('foo'));
+
+        $c = new Collection([1, 2, 3, 4, 5]);
+        $this->assertEquals(5, $c->max());
+
+        $c = new Collection();
+        $this->assertNull($c->max());
+    }
+
+    public function testGettingMinItemsFromCollection()
+    {
+        $c = new Collection([(object) ['foo' => 10], (object) ['foo' => 20]]);
+        $this->assertEquals(10, $c->min('foo'));
+
+        $c = new Collection([['foo' => 10], ['foo' => 20]]);
+        $this->assertEquals(10, $c->min('foo'));
+
+        $c = new Collection([1, 2, 3, 4, 5]);
+        $this->assertEquals(1, $c->min());
+
+        $c = new Collection();
+        $this->assertNull($c->min());
+    }
+
+    public function testOnly()
+    {
+        $data = new Collection(['first' => 'Taylor', 'last' => 'Otwell', 'email' => 'taylorotwell@gmail.com']);
+
+        $this->assertEquals(['first' => 'Taylor'], $data->only(['first', 'missing'])->all());
+        $this->assertEquals(['first' => 'Taylor'], $data->only('first', 'missing')->all());
+
+        $this->assertEquals(['first' => 'Taylor', 'email' => 'taylorotwell@gmail.com'], $data->only(['first', 'email'])->all());
+        $this->assertEquals(['first' => 'Taylor', 'email' => 'taylorotwell@gmail.com'], $data->only('first', 'email')->all());
+    }
+
+    public function testGettingAvgItemsFromCollection()
+    {
+        $c = new Collection([(object) ['foo' => 10], (object) ['foo' => 20]]);
+        $this->assertEquals(15, $c->avg('foo'));
+
+        $c = new Collection([['foo' => 10], ['foo' => 20]]);
+        $this->assertEquals(15, $c->avg('foo'));
+
+        $c = new Collection([1, 2, 3, 4, 5]);
+        $this->assertEquals(3, $c->avg());
+
+        $c = new Collection();
+        $this->assertNull($c->avg());
+    }
 }
 
 class TestAccessorEloquentTestStub
@@ -769,7 +922,7 @@ class TestAccessorEloquentTestStub
         $accessor = 'get'.lcfirst($attribute).'Attribute';
 
         if (method_exists($this, $accessor)) {
-            return !is_null($this->$accessor());
+            return ! is_null($this->$accessor());
         }
 
         return isset($this->$attribute);
