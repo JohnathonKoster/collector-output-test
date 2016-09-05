@@ -49,29 +49,120 @@ class Collection implements ArrayAccess, ArrayableInterface, Countable, Iterator
 	}
 
 	/**
+	* Get the last item from the collection.
+	*
+	* @return mixed|null
+	*/
+	public function last()
+	{
+		return count($this->items) > 0 ? end($this->items) : null;
+	}
+
+	/**
+	 * Get and remove the first item from the collection.
+	 *
+	 * @return mixed|null
+	 */
+	public function shift()
+	{
+		return array_shift($this->items);
+	}
+
+	/**
+	 * Get and remove the last item from the collection.
+	 *
+	 * @return mixed|null
+	 */
+	public function pop()
+	{
+		return array_pop($this->items);
+	}
+
+	/**
 	 * Execute a callback over each item.
 	 *
 	 * @param  Closure  $callback
-	 * @return Illuminate\Support\Collection
+	 * @return \Illuminate\Support\Collection
 	 */
 	public function each(Closure $callback)
 	{
-		$this->items = array_map($callback, $this->items);
+		array_map($callback, $this->items);
 
 		return $this;
+	}
+
+	/**
+	 * Run a map over each of the items.
+	 *
+	 * @param  Closure  $callback
+	 * @return array
+	 */
+	public function map(Closure $callback)
+	{
+		return array_map($callback, $this->items);
 	}
 
 	/**
 	 * Run a filter over each of the items.
 	 *
 	 * @param  Closure  $callback
-	 * @return Illuminate\Support\Collection
+	 * @return \Illuminate\Support\Collection
 	 */
 	public function filter(Closure $callback)
 	{
 		$this->items = array_filter($this->items, $callback);
 
 		return $this;
+	}
+
+	/**
+	 * Reset the keys on the underlying array.
+	 *
+	 * @return \\Illuminate\Support\Collection
+	 */
+	public function values()
+	{
+		$this->items = array_values($this->items);
+
+		return $this;
+	}
+
+	/**
+	 * Fetch a nested element of the collection.
+	 *
+	 * @param  string  $key
+	 * @retunr Illuminate\Support\Collection
+	 */
+	public function fetch($key)
+	{
+		return new Collection(array_fetch($this, $key));
+	}
+
+	/**
+	 * Get a flattened array of the items in the collection.
+	 *
+	 * @return array
+	 */
+	public function flatten()
+	{
+		return array_flatten($this->items);
+	}
+
+	/**
+	 * Merge the collection itmes into a single array.
+	 *
+	 * @return \Illuminate\Support\Collection
+	 */
+	public function merge()
+	{
+		$results = array();
+
+		foreach ($this->items as $values)
+		{
+			$results = array_merge($results, $values);
+		}
+
+		return new Collection($results);
 	}
 
 	/**
@@ -104,7 +195,7 @@ class Collection implements ArrayAccess, ArrayableInterface, Countable, Iterator
 	 * @param  int  $options
 	 * @return string
 	 */
-	public function toJson($options = JSON_NUMERIC_CHECK)
+	public function toJson($options = 0)
 	{
 		return json_encode($this->toArray(), $options);
 	}
