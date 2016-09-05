@@ -258,6 +258,11 @@ class SupportCollectionTest extends PHPUnit_Framework_TestCase
 
         $c = new Collection(['', 'Hello', '', 'World']);
         $this->assertEquals(['Hello', 'World'], $c->filter()->values()->toArray());
+
+        $c = new Collection(['id' => 1, 'first' => 'Hello', 'second' => 'World']);
+        $this->assertEquals(['first' => 'Hello', 'second' => 'World'], $c->filter(function ($item, $key) {
+            return $key != 'id';
+        })->all());
     }
 
     public function testWhere()
@@ -878,6 +883,11 @@ class SupportCollectionTest extends PHPUnit_Framework_TestCase
 
         $c = new Collection(['foo', 'bar']);
         $this->assertEquals(['foo', 'bar'], $c->reject(function ($v) { return $v == 'baz'; })->values()->all());
+
+        $c = new Collection(['id' => 1, 'primary' => 'foo', 'secondary' => 'bar']);
+        $this->assertEquals(['primary' => 'foo', 'secondary' => 'bar'], $c->reject(function ($item, $key) {
+            return $key == 'id';
+        })->all());
     }
 
     public function testSearchReturnsIndexOfFirstFoundItem()
