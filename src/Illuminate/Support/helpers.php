@@ -33,15 +33,19 @@ if (! function_exists('data_get')) {
 
         $key = is_array($key) ? $key : explode('.', $key);
 
-        foreach ($key as $segment) {
-            if (is_array($target)) {
-                if (! array_key_exists($segment, $target)) {
+        while (($segment = array_shift($key)) !== null) {
+            if ($segment === '*') {
+                if (! Arr::accessible($target)) {
                     return value($default);
                 }
 
-                $target = $target[$segment];
-            } elseif ($target instanceof ArrayAccess) {
-                if (! isset($target[$segment])) {
+                $result = Arr::pluck($target, $key);
+
+                return in_array('*', $key) ? Arr::collapse($result) : $result;
+            }
+
+            if (Arr::accessible($target)) {
+                if (! Arr::exists($target, $segment)) {
                     return value($default);
                 }
 
