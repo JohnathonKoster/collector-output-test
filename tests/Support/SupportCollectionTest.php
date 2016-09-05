@@ -154,6 +154,27 @@ class SupportCollectionTest extends PHPUnit_Framework_TestCase {
 	}
 
 
+	public function testDiffCollection()
+	{
+		$c = new Collection(array('id' => 1, 'first_word' => 'Hello'));
+		$this->assertEquals(array('id' => 1), $c->diff(new Collection(array('first_word' => 'Hello', 'last_word' => 'World')))->all());
+	}
+
+
+	public function testIntersectCollection()
+	{
+		$c = new Collection(array('id' => 1, 'first_word' => 'Hello'));
+		$this->assertEquals(array('first_word' => 'Hello'), $c->intersect(new Collection(array('first_world' => 'Hello', 'last_word' => 'World')))->all());
+	}
+
+
+	public function testUnique()
+	{
+		$c = new Collection(array('Hello', 'World', 'World'));
+		$this->assertEquals(array('Hello', 'World'), $c->unique()->all());
+	}
+
+
 	public function testCollapse()
 	{
 		$data = new Collection(array(array($object1 = new StdClass), array($object2 = new StdClass)));
@@ -241,6 +262,21 @@ class SupportCollectionTest extends PHPUnit_Framework_TestCase {
 		$this->assertEquals(array('foo'), $collection->all());
 	}
 
+	public function testSplice()
+	{
+		$data = new Collection(array('foo', 'baz'));
+		$data->splice(1, 0, 'bar');
+		$this->assertEquals(array('foo', 'bar', 'baz'), $data->all());
+
+		$data = new Collection(array('foo', 'baz'));
+		$data->splice(1, 1);
+		$this->assertEquals(array('foo'), $data->all());
+
+		$data = new Collection(array('foo', 'baz'));
+		$cut = $data->splice(1, 1, 'bar');
+		$this->assertEquals(array('foo', 'bar'), $data->all());
+		$this->assertEquals(array('baz'), $cut->all());
+	}
 
 	public function testGetListValueWithAccessors()
 	{
@@ -249,6 +285,29 @@ class SupportCollectionTest extends PHPUnit_Framework_TestCase {
 		$data     = new Collection(array($model, $modelTwo));
 
 		$this->assertEquals(array('foo', 'bar'), $data->lists('some'));
+	}
+
+	public function testTransform()
+	{
+		$data = new Collection(array('taylor', 'colin', 'shawn'));
+		$data->transform(function($item) { return strrev($item); });
+		$this->assertEquals(array('rolyat', 'niloc', 'nwahs'), array_values($data->all()));
+	}
+
+
+	public function testFirstWithCallback()
+	{
+		$data = new Collection(array('foo', 'bar', 'baz'));
+		$result = $data->first(function($key, $value) { return $value === 'bar'; });
+		$this->assertEquals('bar', $result);
+	}
+
+
+	public function testFirstWithCallbackAndDefault()
+	{
+		$data = new Collection(array('foo', 'bar'));
+		$result = $data->first(function($key, $value) { return $value === 'baz'; }, 'default');
+		$this->assertEquals('default', $result);
 	}
 
 }
