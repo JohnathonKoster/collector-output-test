@@ -30,26 +30,6 @@ if (! function_exists('array_fetch')) {
 	}
 }
 
-if (! function_exists('array_first')) {
-	/**
-	 * Return the first element in an array passing a given truth test.
-	 *
-	 * @param  array    $array
-	 * @param  Closure  $callback
-	 * @param  mixed    $default
-	 * @return mixed
-	 */
-	function array_first($array, $callback, $default = null)
-	{
-		foreach ($array as $key => $value)
-		{
-			if (call_user_func($callback, $key, $value)) return $value;
-		}
-
-		return value($default);
-	}
-}
-
 if (! function_exists('array_flatten')) {
 	/**
 	 * Flatten a multi-dimensional array into a single level.
@@ -64,35 +44,6 @@ if (! function_exists('array_flatten')) {
 		array_walk_recursive($array, function($x) use (&$return) { $return[] = $x; });
 
 		return $return;
-	}
-}
-
-if (! function_exists('array_get')) {
-	/**
-	 * Get an item from an array using "dot" notation.
-	 *
-	 * @param  array   $array
-	 * @param  string  $key
-	 * @param  mixed   $default
-	 * @return mixed
-	 */
-	function array_get($array, $key, $default = null)
-	{
-		if (is_null($key)) return $array;
-
-		if (isset($array[$key])) return $array[$key];
-
-		foreach (explode('.', $key) as $segment)
-		{
-			if ( ! is_array($array) || ! array_key_exists($segment, $array))
-			{
-				return value($default);
-			}
-
-			$array = $array[$segment];
-		}
-
-		return $array;
 	}
 }
 
@@ -129,34 +80,6 @@ if (! function_exists('array_pluck')) {
 		}
 
 		return $results;
-	}
-}
-
-if (! function_exists('data_get')) {
-	/**
-	 * Get an item from an array or object using "dot" notation.
-	 *
-	 * @param  mixed   $target
-	 * @param  string  $key
-	 * @param  mixed   $default
-	 * @return mixed
-	 *
-	 * @throws \InvalidArgumentException
-	 */
-	function data_get($target, $key, $default = null)
-	{
-		if (is_array($target))
-		{
-			return array_get($target, $key, $default);
-		}
-		elseif (is_object($target))
-		{
-			return object_get($target, $key, $default);
-		}
-		else
-		{
-			throw new \InvalidArgumentException("Array or object must be passed to data_get.");
-		}
 	}
 }
 
