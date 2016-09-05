@@ -71,3 +71,16 @@ if (! function_exists('value')) {
         return $value instanceof Closure ? $value() : $value;
     }
 }
+
+if (! function_exists('with')) {
+	/**
+     * Return the given object. Useful for chaining.
+     *
+     * @param  mixed  $object
+     * @return mixed
+     */
+    function with($object)
+    {
+        return $object;
+    }
+}
