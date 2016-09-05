@@ -4,4 +4,3 @@ composer.lock
 .php_cs.cache
 .DS_Store
 Thumbs.db
-/phpunit.xml

@@ -33,22 +33,24 @@ if (! function_exists('data_get')) {
 
         $key = is_array($key) ? $key : explode('.', $key);
 
-        while (($segment = array_shift($key)) !== null) {
-            if ($segment === '*') {
-                if ($target instanceof Collection) {
-                    $target = $target->all();
-                } elseif (! is_array($target)) {
+        foreach ($key as $segment) {
+            if (is_array($target)) {
+                if (! array_key_exists($segment, $target)) {
                     return value($default);
                 }
 
-                $result = Arr::pluck($target, $key);
-
-                return in_array('*', $key) ? Arr::collapse($result) : $result;
-            }
-
-            if (Arr::accessible($target) && Arr::exists($target, $segment)) {
                 $target = $target[$segment];
-            } elseif (is_object($target) && isset($target->{$segment})) {
+            } elseif ($target instanceof ArrayAccess) {
+                if (! isset($target[$segment])) {
+                    return value($default);
+                }
+
+                $target = $target[$segment];
+            } elseif (is_object($target)) {
+                if (! isset($target->{$segment})) {
+                    return value($default);
+                }
+
                 $target = $target->{$segment};
             } else {
                 return value($default);
@@ -69,18 +71,5 @@ if (! function_exists('value')) {
     function value($value)
     {
         return $value instanceof Closure ? $value() : $value;
-    }
-}
-
-if (! function_exists('with')) {
-	/**
-     * Return the given object. Useful for chaining.
-     *
-     * @param  mixed  $object
-     * @return mixed
-     */
-    function with($object)
-    {
-        return $object;
     }
 }
